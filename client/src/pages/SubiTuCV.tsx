@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { InsertCV } from "@shared/schema";
 
 export default function SubiTuCV() {
   const { toast } = useToast();
@@ -26,7 +29,36 @@ export default function SubiTuCV() {
     descripcion: "",
   });
   const [file, setFile] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: async (data: InsertCV) => {
+      return await apiRequest("POST", "/api/cvs", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "CV enviado exitosamente",
+        description: "Tu currículum ha sido cargado en nuestra base de datos",
+      });
+      
+      setFormData({
+        nombre: "",
+        apellido: "",
+        email: "",
+        telefono: "",
+        especialidad: "",
+        anio: "",
+        descripcion: "",
+      });
+      setFile(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error al enviar CV",
+        description: "Hubo un problema al cargar tu currículum. Intentá nuevamente.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -45,28 +77,17 @@ export default function SubiTuCV() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    console.log("Enviando CV:", { ...formData, file: file?.name });
-
-    setTimeout(() => {
-      setIsSubmitting(false);
+    
+    if (!file) {
       toast({
-        title: "CV enviado exitosamente",
-        description: "Tu currículum ha sido cargado en nuestra base de datos",
+        title: "Falta el CV",
+        description: "Por favor, subí tu currículum en formato PDF",
+        variant: "destructive",
       });
-      
-      setFormData({
-        nombre: "",
-        apellido: "",
-        email: "",
-        telefono: "",
-        especialidad: "",
-        anio: "",
-        descripcion: "",
-      });
-      setFile(null);
-    }, 1500);
+      return;
+    }
+
+    mutation.mutate(formData as InsertCV);
   };
 
   return (
@@ -222,8 +243,8 @@ export default function SubiTuCV() {
                       </div>
                     </div>
 
-                    <Button type="submit" size="lg" className="w-full" disabled={isSubmitting} data-testid="button-submit">
-                      {isSubmitting ? "Enviando..." : "Enviar CV"}
+                    <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending} data-testid="button-submit">
+                      {mutation.isPending ? "Enviando..." : "Enviar CV"}
                     </Button>
                   </form>
                 </CardContent>

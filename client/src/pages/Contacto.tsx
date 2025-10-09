@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Phone, MapPin, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { InsertContactMessage } from "@shared/schema";
 
 export default function Contacto() {
   const { toast } = useToast();
@@ -22,16 +25,12 @@ export default function Contacto() {
     asunto: "",
     mensaje: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    console.log("Enviando mensaje:", formData);
-
-    setTimeout(() => {
-      setIsSubmitting(false);
+  const mutation = useMutation({
+    mutationFn: async (data: InsertContactMessage) => {
+      return await apiRequest("POST", "/api/contact", data);
+    },
+    onSuccess: () => {
       toast({
         title: "Mensaje enviado",
         description: "Te responderemos a la brevedad",
@@ -42,7 +41,19 @@ export default function Contacto() {
         asunto: "",
         mensaje: "",
       });
-    }, 1500);
+    },
+    onError: () => {
+      toast({
+        title: "Error al enviar mensaje",
+        description: "Hubo un problema. Intentá nuevamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    mutation.mutate(formData as InsertContactMessage);
   };
 
   return (
@@ -124,9 +135,9 @@ export default function Contacto() {
                       />
                     </div>
 
-                    <Button type="submit" size="lg" className="w-full" disabled={isSubmitting} data-testid="button-submit">
+                    <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending} data-testid="button-submit">
                       <Send className="w-5 h-5 mr-2" />
-                      {isSubmitting ? "Enviando..." : "Enviar mensaje"}
+                      {mutation.isPending ? "Enviando..." : "Enviar mensaje"}
                     </Button>
                   </form>
                 </CardContent>

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import JobCard from "@/components/JobCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,74 +11,72 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, SlidersHorizontal } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Search, SlidersHorizontal, MapPin, Clock, Briefcase, FileText } from "lucide-react";
+import type { Job } from "@shared/schema";
 
 export default function Ofertas() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRubro, setSelectedRubro] = useState("");
-  const [selectedJornada, setSelectedJornada] = useState("");
-  const [selectedUbicacion, setSelectedUbicacion] = useState("");
+  const [location] = useLocation();
+  const searchParams = new URLSearchParams(location.split("?")[1] || "");
+  
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("query") || "");
+  const [selectedRubro, setSelectedRubro] = useState(searchParams.get("rubro") || "");
+  const [selectedJornada, setSelectedJornada] = useState(searchParams.get("jornada") || "");
+  const [selectedUbicacion, setSelectedUbicacion] = useState(searchParams.get("ubicacion") || "");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(searchParams.get("jobId"));
 
-  const allJobs = [
-    {
-      id: "1",
-      title: "Desarrollador Web Junior",
-      company: "Tech Solutions SA",
-      location: "CABA",
-      jobType: "Part-time",
-      specialization: "Programación",
-      description: "Buscamos estudiante de informática para desarrollo web. Horario flexible compatible con cursada.",
+  const queryString = new URLSearchParams({
+    ...(searchQuery && { query: searchQuery }),
+    ...(selectedRubro && { rubro: selectedRubro }),
+    ...(selectedJornada && { jornada: selectedJornada }),
+    ...(selectedUbicacion && { ubicacion: selectedUbicacion }),
+  }).toString();
+
+  const { data: jobs = [], isLoading } = useQuery<Job[]>({
+    queryKey: ["/api/jobs", queryString],
+    queryFn: async () => {
+      const response = await fetch(`/api/jobs?${queryString}`);
+      if (!response.ok) throw new Error("Error al cargar ofertas");
+      return response.json();
     },
-    {
-      id: "2",
-      title: "Técnico de Redes",
-      company: "DataNet Argentina",
-      location: "Zona Norte",
-      jobType: "Pasantía",
-      specialization: "Redes",
-      description: "Práctica profesionalizante en instalación y mantenimiento de redes. Supervisión y capacitación incluida.",
-    },
-    {
-      id: "3",
-      title: "Soporte Técnico",
-      company: "CompuFix",
-      location: "CABA",
-      jobType: "Part-time",
-      specialization: "Soporte técnico",
-      description: "Asistencia técnica remota y presencial. Ideal para estudiantes de 5to o 6to año.",
-    },
-    {
-      id: "4",
-      title: "Programador Backend",
-      company: "Innovatech",
-      location: "Remoto",
-      jobType: "Part-time",
-      specialization: "Programación",
-      description: "Desarrollo de APIs y servicios backend. Trabajo remoto con reuniones semanales.",
-    },
-    {
-      id: "5",
-      title: "Diseñador UI/UX",
-      company: "Creative Studio",
-      location: "CABA",
-      jobType: "Práctica profesionalizante",
-      specialization: "Diseño web",
-      description: "Diseño de interfaces y experiencia de usuario. Práctica de 6 meses con posibilidad de contratación.",
-    },
-    {
-      id: "6",
-      title: "Técnico Electrónico",
-      company: "AutoControl SRL",
-      location: "Zona Sur",
-      jobType: "Part-time",
-      specialization: "Electrónica",
-      description: "Mantenimiento de sistemas de automatización industrial. Horario de 4 horas diarias.",
-    },
-  ];
+  });
+
+  const selectedJob = jobs.find(job => job.id === selectedJobId);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.split("?")[1] || "");
+    setSearchQuery(params.get("query") || "");
+    setSelectedRubro(params.get("rubro") || "");
+    setSelectedJornada(params.get("jornada") || "");
+    setSelectedUbicacion(params.get("ubicacion") || "");
+    setSelectedJobId(params.get("jobId"));
+  }, [location]);
 
   const handleSearch = () => {
     console.log("Buscando con filtros:", { searchQuery, selectedRubro, selectedJornada, selectedUbicacion });
+  };
+
+  const rubroMapping: { [key: string]: string } = {
+    "programacion": "Programación",
+    "redes": "Redes",
+    "soporte": "Soporte técnico",
+    "diseno": "Diseño web",
+    "electronica": "Electrónica",
+    "mecanica": "Mecánica",
+  };
+
+  const jornadaMapping: { [key: string]: string } = {
+    "part-time": "Part-time",
+    "full-time": "Full-time",
+    "pasantia": "Pasantía",
+    "practica": "Práctica profesionalizante",
   };
 
   return (
@@ -121,7 +121,7 @@ export default function Ofertas() {
               </Button>
             </div>
 
-            <div className={`grid grid-cols-1 md:grid-cols-3 gap-3 ${showFilters || window.innerWidth >= 768 ? '' : 'hidden'}`}>
+            <div className={`grid grid-cols-1 md:grid-cols-3 gap-3 ${showFilters || window.innerWidth >= 768 ? '' : 'hidden md:grid'}`}>
               <Select value={selectedRubro} onValueChange={setSelectedRubro}>
                 <SelectTrigger className="h-12" data-testid="select-rubro">
                   <SelectValue placeholder="Rubro" />
@@ -165,17 +165,77 @@ export default function Ofertas() {
 
           <div className="mb-6">
             <p className="text-muted-foreground" data-testid="text-results-count">
-              Mostrando {allJobs.length} ofertas
+              {isLoading ? "Cargando..." : `Mostrando ${jobs.length} ofertas`}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {allJobs.map((job) => (
-              <JobCard key={job.id} {...job} onViewDetails={(id) => console.log("Ver detalles:", id)} />
+            {jobs.map((job) => (
+              <JobCard key={job.id} {...job} onViewDetails={(id) => setSelectedJobId(id)} />
             ))}
           </div>
+
+          {!isLoading && jobs.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg">
+                No se encontraron ofertas con los filtros seleccionados
+              </p>
+            </div>
+          )}
         </div>
       </div>
+
+      <Dialog open={!!selectedJobId} onOpenChange={() => setSelectedJobId(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selectedJob && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-heading text-2xl">{selectedJob.title}</DialogTitle>
+                <DialogDescription className="text-base">{selectedJob.company}</DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-6 pt-4">
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <span>{selectedJob.location}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <span>{selectedJob.jobType}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Briefcase className="w-4 h-4 text-muted-foreground" />
+                    <span>{selectedJob.specialization}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-heading font-semibold text-lg mb-2">Descripción</h3>
+                  <p className="text-muted-foreground leading-relaxed">{selectedJob.description}</p>
+                </div>
+
+                {selectedJob.requirements && (
+                  <div>
+                    <h3 className="font-heading font-semibold text-lg mb-2">Requisitos</h3>
+                    <p className="text-muted-foreground leading-relaxed">{selectedJob.requirements}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <Button className="flex-1" data-testid="button-apply">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Postularme
+                  </Button>
+                  <Button variant="outline" onClick={() => setSelectedJobId(null)} data-testid="button-close">
+                    Cerrar
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

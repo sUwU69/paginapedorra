@@ -1,86 +1,64 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import SearchHero from "@/components/SearchHero";
 import JobCard from "@/components/JobCard";
 import CategoryCard from "@/components/CategoryCard";
 import TestimonialCard from "@/components/TestimonialCard";
 import { Button } from "@/components/ui/button";
 import { Code, Network, Wrench, Palette, CircuitBoard, Cog, Upload, FileText, Scale } from "lucide-react";
+import type { Job } from "@shared/schema";
 
 export default function Home() {
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
 
-  const featuredJobs = [
-    {
-      id: "1",
-      title: "Desarrollador Web Junior",
-      company: "Tech Solutions SA",
-      location: "CABA",
-      jobType: "Part-time",
-      specialization: "Programación",
-      description: "Buscamos estudiante de informática para desarrollo web. Horario flexible compatible con cursada.",
-    },
-    {
-      id: "2",
-      title: "Técnico de Redes",
-      company: "DataNet Argentina",
-      location: "Zona Norte",
-      jobType: "Pasantía",
-      specialization: "Redes",
-      description: "Práctica profesionalizante en instalación y mantenimiento de redes. Supervisión y capacitación incluida.",
-    },
-    {
-      id: "3",
-      title: "Soporte Técnico",
-      company: "CompuFix",
-      location: "CABA",
-      jobType: "Part-time",
-      specialization: "Soporte técnico",
-      description: "Asistencia técnica remota y presencial. Ideal para estudiantes de 5to o 6to año.",
-    },
-  ];
+  const { data: jobs = [], isLoading } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"],
+  });
+
+  const featuredJobs = jobs.slice(0, 3);
 
   const categories = [
     {
       title: "Programación",
       description: "Desarrollo web, aplicaciones móviles, bases de datos y más.",
       icon: Code,
-      count: 15,
+      count: jobs.filter(j => j.specialization === "Programación").length,
       href: "/ofertas?rubro=programacion",
     },
     {
       title: "Redes",
       description: "Instalación, mantenimiento y configuración de redes.",
       icon: Network,
-      count: 8,
+      count: jobs.filter(j => j.specialization === "Redes").length,
       href: "/ofertas?rubro=redes",
     },
     {
       title: "Soporte técnico",
       description: "Asistencia técnica, mantenimiento de equipos y sistemas.",
       icon: Wrench,
-      count: 12,
+      count: jobs.filter(j => j.specialization === "Soporte técnico").length,
       href: "/ofertas?rubro=soporte",
     },
     {
       title: "Diseño web",
       description: "Diseño UI/UX, desarrollo frontend y experiencia de usuario.",
       icon: Palette,
-      count: 6,
+      count: jobs.filter(j => j.specialization === "Diseño web").length,
       href: "/ofertas?rubro=diseno",
     },
     {
       title: "Electrónica",
       description: "Proyectos de electrónica, automatización y control.",
       icon: CircuitBoard,
-      count: 5,
+      count: jobs.filter(j => j.specialization === "Electrónica").length,
       href: "/ofertas?rubro=electronica",
     },
     {
       title: "Mecánica",
       description: "Mantenimiento industrial, diseño mecánico y más.",
       icon: Cog,
-      count: 4,
+      count: jobs.filter(j => j.specialization === "Mecánica").length,
       href: "/ofertas?rubro=mecanica",
     },
   ];
@@ -101,12 +79,16 @@ export default function Home() {
   ];
 
   const handleSearch = (query: string, rubro: string, jornada: string, ubicacion: string) => {
-    console.log("Búsqueda:", { query, rubro, jornada, ubicacion });
+    const params = new URLSearchParams();
+    if (query) params.set("query", query);
+    if (rubro) params.set("rubro", rubro);
+    if (jornada) params.set("jornada", jornada);
+    if (ubicacion) params.set("ubicacion", ubicacion);
+    setLocation(`/ofertas?${params.toString()}`);
   };
 
   const handleViewDetails = (id: string) => {
-    setSelectedJobId(id);
-    console.log("Ver detalles del trabajo:", id);
+    setLocation(`/ofertas?jobId=${id}`);
   };
 
   return (
@@ -124,19 +106,27 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {featuredJobs.map((job) => (
-              <JobCard key={job.id} {...job} onViewDetails={handleViewDetails} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Cargando ofertas...</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {featuredJobs.map((job) => (
+                  <JobCard key={job.id} {...job} onViewDetails={handleViewDetails} />
+                ))}
+              </div>
 
-          <div className="text-center">
-            <Link href="/ofertas">
-              <Button size="lg" data-testid="button-view-all-jobs">
-                Ver todas las ofertas
-              </Button>
-            </Link>
-          </div>
+              <div className="text-center">
+                <Link href="/ofertas">
+                  <Button size="lg" data-testid="button-view-all-jobs">
+                    Ver todas las ofertas
+                  </Button>
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

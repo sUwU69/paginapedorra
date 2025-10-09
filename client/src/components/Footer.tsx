@@ -53,17 +53,13 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <Link href="/derechos">
-                  <a className="opacity-90 hover:opacity-100 hover:underline" data-testid="link-footer-derechos">
-                    Derechos laborales estudiantiles
-                  </a>
+                <Link href="/derechos" className="opacity-90 hover:opacity-100 hover:underline" data-testid="link-footer-derechos">
+                  Derechos laborales estudiantiles
                 </Link>
               </li>
               <li>
-                <Link href="/contacto">
-                  <a className="opacity-90 hover:opacity-100 hover:underline" data-testid="link-footer-contacto">
-                    Contacto institucional
-                  </a>
+                <Link href="/contacto" className="opacity-90 hover:opacity-100 hover:underline" data-testid="link-footer-contacto">
+                  Contacto institucional
                 </Link>
               </li>
             </ul>
