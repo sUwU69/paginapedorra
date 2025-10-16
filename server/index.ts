@@ -60,12 +60,17 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  const HOST = process.env.HOST ?? '0.0.0.0';
+  const PORT = Number(process.env.PORT ?? 5000);
+
+  server.on('error', (err) => {
+    console.error('Server error:', err);
+    process.exit(1);
+  });
+
+  // Evitar fallo en entornos que no soportan 0.0.0.0: usar fallback a 127.0.0.1
+  const listenHost = HOST === '0.0.0.0' ? '127.0.0.1' : HOST;
+  server.listen(PORT, listenHost, () => {
+    console.log(`Server listening on http://${listenHost}:${PORT}`);
   });
 })();
