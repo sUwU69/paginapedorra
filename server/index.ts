@@ -59,37 +59,16 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Serve the app on the port specified in PORT (default 5000).
-  // On some platforms (Windows) certain socket options like `reusePort`
-  // are not supported and cause ENOTSUP. We'll bind to 127.0.0.1 and try
-  // a small range of ports if the preferred one is unavailable.
-  const basePort = parseInt(process.env.PORT || "5000", 10);
-  const maxAttempts = 6; // try basePort .. basePort+5
-  let currentPort = basePort;
-
-  const tryListen = (attemptsLeft: number) => {
-    // Temporary error listener for this attempt
-    const onError = (err: any) => {
-      if ((err?.code === "EADDRINUSE" || err?.code === "EACCES") && attemptsLeft > 0) {
-        log(`Port ${currentPort} unavailable (${err.code}), trying ${currentPort + 1}`);
-        currentPort += 1;
-        // remove this listener before retrying
-        server.removeListener("error", onError);
-        setTimeout(() => tryListen(attemptsLeft - 1), 200);
-      } else {
-        console.error(err);
-        process.exit(1);
-      }
-    };
-
-    server.once("error", onError);
-
-    server.listen(currentPort, "127.0.0.1", () => {
-      // remove error listener because we started successfully
-      server.removeListener("error", onError);
-      log(`Servidor escuchando en http://127.0.0.1:${currentPort}`);
-    });
-  };
-
-  tryListen(maxAttempts);
+  // ALWAYS serve the app on the port specified in the environment variable PORT
+  // Other ports are firewalled. Default to 5000 if not specified.
+  // this serves both the API and the client.
+  // It is the only port that is not firewalled.
+  const port = parseInt(process.env.PORT || '5000', 10);
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
+  });
 })();
