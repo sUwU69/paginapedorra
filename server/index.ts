@@ -59,30 +59,16 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Servir la app solo en un puerto permitido y compatible con Windows
-  const port = parseInt(process.env.PORT || "5000", 10);
-
-  // Start the http.Server returned by registerRoutes so it's the same instance
-  // used by Vite's HMR server. If the port is occupied, try a few alternates.
-  const maxAttempts = 6; // try port, port+1, ...
-  let currentPort = port;
-
-  const tryListen = (attemptsLeft: number) => {
-    server.once("error", (err: any) => {
-      if (err?.code === "EADDRINUSE" && attemptsLeft > 0) {
-        log(`Port ${currentPort} in use, trying ${currentPort + 1}`);
-        currentPort += 1;
-        setTimeout(() => tryListen(attemptsLeft - 1), 200);
-      } else {
-        console.error(err);
-        process.exit(1);
-      }
-    });
-
-    server.listen(currentPort, "127.0.0.1", () => {
-      console.log(`Servidor escuchando en http://127.0.0.1:${currentPort}`);
-    });
-  };
-
-  tryListen(maxAttempts);
+  // ALWAYS serve the app on the port specified in the environment variable PORT
+  // Other ports are firewalled. Default to 5000 if not specified.
+  // this serves both the API and the client.
+  // It is the only port that is not firewalled.
+  const port = parseInt(process.env.PORT || '5000', 10);
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
+  });
 })();
