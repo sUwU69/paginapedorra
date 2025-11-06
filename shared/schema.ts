@@ -1,64 +1,104 @@
-import { pgTable, text, varchar, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const jobs = pgTable("jobs", {
-  id: varchar("id").primaryKey(),
-  title: text("title").notNull(),
-  company: text("company").notNull(),
-  location: text("location").notNull(),
-  jobType: text("job_type").notNull(),
-  specialization: text("specialization").notNull(),
-  description: text("description").notNull(),
-  requirements: text("requirements"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// Job types
+export interface Job {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  jobType: string;
+  specialization: string;
+  description: string;
+  requirements: string | null;
+  createdAt: Date;
+}
+
+export interface InsertJob {
+  title: string;
+  company: string;
+  location: string;
+  jobType: string;
+  specialization: string;
+  description: string;
+  requirements?: string;
+}
+
+// CV types
+export interface CV {
+  id: string;
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  especialidad: string;
+  anio: string;
+  descripcion: string | null;
+  cvFileName: string | null;
+  cvFilePath: string | null;
+  userId?: string;
+  status?: "pending" | "accepted" | "rejected";
+  createdAt: Date;
+}
+
+export interface InsertCV {
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  especialidad: string;
+  anio: string;
+  descripcion?: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  message: string;
+  read: boolean;
+  createdAt: Date;
+}
+
+// Contact Message types
+export interface ContactMessage {
+  id: string;
+  nombre: string;
+  email: string;
+  asunto: string;
+  mensaje: string;
+  createdAt: Date;
+}
+
+export interface InsertContactMessage {
+  nombre: string;
+  email: string;
+  asunto: string;
+  mensaje: string;
+}
+
+// Validation schemas
+export const insertJobSchema = z.object({
+  title: z.string(),
+  company: z.string(),
+  location: z.string(),
+  jobType: z.string(),
+  specialization: z.string(),
+  description: z.string(),
+  requirements: z.string().optional(),
 });
 
-export const cvs = pgTable("cvs", {
-  id: varchar("id").primaryKey(),
-  nombre: text("nombre").notNull(),
-  apellido: text("apellido").notNull(),
-  email: text("email").notNull(),
-  telefono: text("telefono").notNull(),
-  especialidad: text("especialidad").notNull(),
-  anio: text("anio").notNull(),
-  descripcion: text("descripcion"),
-  cvFileName: text("cv_file_name"),
-  cvFilePath: text("cv_file_path"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertCVSchema = z.object({
+  nombre: z.string(),
+  apellido: z.string(),
+  email: z.string().email(),
+  telefono: z.string(),
+  especialidad: z.string(),
+  anio: z.string(),
+  descripcion: z.string().optional(),
 });
 
-export const contactMessages = pgTable("contact_messages", {
-  id: varchar("id").primaryKey(),
-  nombre: text("nombre").notNull(),
-  email: text("email").notNull(),
-  asunto: text("asunto").notNull(),
-  mensaje: text("mensaje").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertContactMessageSchema = z.object({
+  nombre: z.string(),
+  email: z.string().email(),
+  asunto: z.string(),
+  mensaje: z.string(),
 });
-
-export const insertJobSchema = createInsertSchema(jobs).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCVSchema = createInsertSchema(cvs).omit({
-  id: true,
-  createdAt: true,
-  cvFileName: true,
-  cvFilePath: true,
-});
-
-export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertJob = z.infer<typeof insertJobSchema>;
-export type Job = typeof jobs.$inferSelect;
-
-export type InsertCV = z.infer<typeof insertCVSchema>;
-export type CV = typeof cvs.$inferSelect;
-
-export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
-export type ContactMessage = typeof contactMessages.$inferSelect;

@@ -1,7 +1,15 @@
-import { type Job, type InsertJob, type CV, type InsertCV, type ContactMessage, type InsertContactMessage } from "@shared/schema";
+import type { Job, InsertJob, CV, InsertCV, ContactMessage, InsertContactMessage, Notification } from "@shared/schema";
+import type { User, InsertUser, UserRole } from "@shared/auth";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
+  // Users
+  createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  verifyCompany(userId: string): Promise<User>;
+  updateUserRole(userId: string, role: UserRole): Promise<User>;
+  
   // Jobs
   getAllJobs(): Promise<Job[]>;
   getJobById(id: string): Promise<Job | undefined>;
@@ -16,21 +24,72 @@ export interface IStorage {
   // CVs
   getAllCVs(): Promise<CV[]>;
   getCVById(id: string): Promise<CV | undefined>;
-  createCV(cv: InsertCV, fileName?: string, filePath?: string): Promise<CV>;
+  createCV(cv: InsertCV & { userId: string, filePath: string }): Promise<CV>;
+  getCVByUserId(userId: string): Promise<CV | undefined>;
+  updateCV(cvId: string, updatedFields: Partial<CV>): Promise<CV>;
+  acceptCV(cvId: string, byUserId?: string): Promise<CV>;
+  rejectCV(cvId: string, byUserId?: string): Promise<CV>;
+
+  // Notifications
+  createNotification(notification: Notification): Promise<void>;
+  getNotificationsForUser(userId: string): Promise<Notification[]>;
+  markNotificationRead(notificationId: string): Promise<void>;
   
   // Contact Messages
   createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
 }
 
-export class MemStorage implements IStorage {
-  private jobs: Map<string, Job>;
-  private cvs: Map<string, CV>;
-  private contactMessages: Map<string, ContactMessage>;
+class MemoryStore<T> {
+  private store: Map<string, T>;
 
   constructor() {
-    this.jobs = new Map();
-    this.cvs = new Map();
-    this.contactMessages = new Map();
+    this.store = new Map();
+  }
+
+  set(key: string, value: T): void {
+    this.store.set(key, value);
+  }
+
+  get(key: string): T | undefined {
+    return this.store.get(key);
+  }
+
+  delete(key: string): boolean {
+    return this.store.delete(key);
+  }
+
+  values(): IterableIterator<T> {
+    return this.store.values();
+  }
+}
+
+import { persistentUsers, persistentCVs, persistentNotifications } from './persistentStorage';
+
+export class MemStorage implements IStorage {
+  private jobs: MemoryStore<Job>;
+  private cvs: MemoryStore<CV>;
+  private contactMessages: MemoryStore<ContactMessage>;
+  private users: MemoryStore<User>;
+
+  constructor() {
+    this.jobs = new MemoryStore();
+    this.cvs = new MemoryStore();
+    this.contactMessages = new MemoryStore();
+    this.users = new MemoryStore();
+    
+    // Cargar usuarios persistentes
+    persistentUsers.getAll().forEach(user => {
+      // Convertir fechas serializadas a Date
+      const u = { ...user, createdAt: new Date(user.createdAt) } as User;
+      this.users.set(u.id, u);
+    });
+    
+    // Cargar CVs persistentes (convertir createdAt a Date)
+    persistentCVs.getAll().forEach(cv => {
+      const c = { ...cv, createdAt: new Date(cv.createdAt) } as CV;
+      this.cvs.set(c.id, c);
+    });
+
     this.seedJobs();
   }
 
@@ -219,9 +278,89 @@ export class MemStorage implements IStorage {
       cvFileName: fileName || null,
       cvFilePath: filePath || null,
       createdAt: new Date(),
+      userId: (insertCV as any).userId || undefined,
+      status: 'pending',
     };
     this.cvs.set(id, cv);
+    persistentCVs.add(cv);
     return cv;
+  }
+
+  async getCVByUserId(userId: string): Promise<CV | undefined> {
+    return Array.from(this.cvs.values()).find(c => c.userId === userId);
+  }
+
+  async updateCV(cvId: string, updatedFields: Partial<CV>): Promise<CV> {
+    const cv = this.cvs.get(cvId);
+    if (!cv) throw new Error('CV no encontrado');
+    const updated = { ...cv, ...updatedFields } as CV;
+    this.cvs.set(cvId, updated);
+    persistentCVs.update(cvId, updated);
+    return updated;
+  }
+
+  async acceptCV(cvId: string, byUserId?: string): Promise<CV> {
+    const cv = this.cvs.get(cvId);
+    if (!cv) throw new Error('CV no encontrado');
+    const updated = { ...cv, status: 'accepted' } as CV;
+    this.cvs.set(cvId, updated);
+    persistentCVs.update(cvId, updated);
+    // create notification
+    const note: Notification = {
+      id: randomUUID(),
+      userId: cv.userId || '',
+      message: `Tu CV ha sido aceptado`,
+      read: false,
+      createdAt: new Date(),
+    };
+    persistentNotifications.add(note);
+    return updated;
+  }
+
+  async rejectCV(cvId: string, byUserId?: string): Promise<CV> {
+    const cv = this.cvs.get(cvId);
+    if (!cv) throw new Error('CV no encontrado');
+    const updated = { ...cv, status: 'rejected' } as CV;
+    this.cvs.set(cvId, updated);
+    persistentCVs.update(cvId, updated);
+    const note: Notification = {
+      id: randomUUID(),
+      userId: cv.userId || '',
+      message: `Tu CV ha sido rechazado por un administrador`,
+      read: false,
+      createdAt: new Date(),
+    };
+    persistentNotifications.add(note);
+    return updated;
+  }
+
+  // Notifications
+  async createNotification(notification: Notification): Promise<void> {
+    persistentNotifications.add(notification);
+  }
+
+  async getNotificationsForUser(userId: string): Promise<Notification[]> {
+    return persistentNotifications.getByUser(userId);
+  }
+
+  async markNotificationRead(notificationId: string): Promise<void> {
+    persistentNotifications.markRead(notificationId);
+  }
+
+  async deleteCV(cvId: string): Promise<void> {
+    this.cvs.delete(cvId);
+    persistentCVs.delete(cvId);
+  }
+
+  async renameCVFile(cvId: string, newFileName: string): Promise<CV | undefined> {
+    const cv = this.cvs.get(cvId);
+    if (cv) {
+      persistentCVs.renameFile(cvId, newFileName);
+      const updatedCV = { ...cv, cvFileName: newFileName };
+      this.cvs.set(cvId, updatedCV);
+      return updatedCV;
+    }
+    return undefined;
   }
 
   async createContactMessage(insertMessage: InsertContactMessage): Promise<ContactMessage> {
@@ -233,6 +372,54 @@ export class MemStorage implements IStorage {
     };
     this.contactMessages.set(id, message);
     return message;
+  }
+
+  // User methods
+  async createUser(user: InsertUser): Promise<User> {
+    const id = randomUUID();
+    const newUser: User = {
+      ...user,
+      id,
+      createdAt: new Date(),
+      companyVerified: false,
+    };
+    this.users.set(id, newUser);
+    persistentUsers.add(newUser);
+    return newUser;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      user => user.email.toLowerCase() === email.toLowerCase());
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async verifyCompany(userId: string): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+    if (user.role !== "company") {
+      throw new Error("El usuario no es una empresa");
+    }
+    const updatedUser = { ...user, companyVerified: true };
+    this.users.set(userId, updatedUser);
+    persistentUsers.update(userId, updatedUser);
+    return updatedUser;
+  }
+
+  async updateUserRole(userId: string, role: UserRole): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+    const updatedUser = { ...user, role };
+    this.users.set(userId, updatedUser);
+    persistentUsers.update(userId, updatedUser);
+    return updatedUser;
   }
 }
 

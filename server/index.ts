@@ -3,13 +3,29 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
 import * as dotenv from 'dotenv';
+import cors from 'cors';
+import { sessionMiddleware } from "./session";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+
+// Configuración de CORS
+app.use(cors({
+  origin: true, // Permite todas las origenes en desarrollo
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Set-Cookie'],
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(sessionMiddleware);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -42,6 +58,24 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Create required directories
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const uploadsDir = path.join(__dirname, '../uploads');
+  const curriculumsDir = path.join(uploadsDir, 'curriculums');
+
+  // Crear directorios si no existen
+  [uploadsDir, curriculumsDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`Directorio creado: ${dir}`);
+    }
+  });
+
+  // Initialize admin user
+  const { initializeAdmin } = await import('./initAdmin');
+  await initializeAdmin();
+
   // register routes and get an http.Server instance so Vite HMR can attach
   const server = await registerRoutes(app);
 

@@ -2,10 +2,13 @@ import { Link, useLocation } from "wouter";
 import { Menu, X, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { UserMenu } from "@/components/UserMenu";
 
 export default function Header() {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
 
   const navItems = [
     { label: "Inicio", path: "/" },
@@ -14,6 +17,7 @@ export default function Header() {
     { label: "Rubros / Áreas", path: "/rubros" },
     { label: "Derechos laborales", path: "/derechos" },
     { label: "Contacto", path: "/contacto" },
+    ...(user?.role === "admin" ? [{ label: "Panel Admin", path: "/admin" }] : []),
   ];
 
   const isActive = (path: string) => location === path;
@@ -49,6 +53,9 @@ export default function Header() {
               </Link>
             ))}
           </nav>
+          <div className="hidden lg:block">
+            <UserMenu />
+          </div>
 
           <button
             className="lg:hidden p-2"
@@ -76,6 +83,9 @@ export default function Header() {
                 </Button>
               </Link>
             ))}
+            <div className="pt-2 border-t border-white/10">
+              <UserMenu />
+            </div>
           </nav>
         </div>
       )}

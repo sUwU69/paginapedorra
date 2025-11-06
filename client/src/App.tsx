@@ -5,12 +5,17 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { PrivateRoute, AdminRoute } from "@/lib/auth";
 import Home from "@/pages/Home";
 import Ofertas from "@/pages/Ofertas";
 import SubiTuCV from "@/pages/SubiTuCV";
 import Rubros from "@/pages/Rubros";
 import Derechos from "@/pages/Derechos";
 import Contacto from "@/pages/Contacto";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
+import Admin from "@/pages/Admin";
+import Profile from "@/pages/Profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,10 +23,26 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/ofertas" component={Ofertas} />
-      <Route path="/subi-tu-cv" component={SubiTuCV} />
+      <Route path="/subi-tu-cv">
+        <PrivateRoute>
+          <SubiTuCV />
+        </PrivateRoute>
+      </Route>
       <Route path="/rubros" component={Rubros} />
       <Route path="/derechos" component={Derechos} />
       <Route path="/contacto" component={Contacto} />
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      <Route path="/admin">
+        <AdminRoute>
+          <Admin />
+        </AdminRoute>
+      </Route>
+      <Route path="/profile">
+        <PrivateRoute>
+          <Profile />
+        </PrivateRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

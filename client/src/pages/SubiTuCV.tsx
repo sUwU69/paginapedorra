@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/lib/auth";
+import { UnauthorizedView } from "@/components/UnauthorizedView";
 import {
   Select,
   SelectContent,
@@ -19,20 +21,48 @@ import type { InsertCV } from "@shared/schema";
 
 export default function SubiTuCV() {
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <UnauthorizedView />;
+  }
   const [formData, setFormData] = useState({
     nombre: "",
     apellido: "",
     email: "",
     telefono: "",
     especialidad: "",
+    especialidadOtra: "",
     anio: "",
     descripcion: "",
   });
   const [file, setFile] = useState<File | null>(null);
 
   const mutation = useMutation({
-    mutationFn: async (data: InsertCV) => {
-      return await apiRequest("POST", "/api/cvs", data);
+    mutationFn: async (_data?: InsertCV) => {
+      // send multipart/form-data including the PDF file
+      const form = new FormData();
+      form.append("nombre", formData.nombre);
+      form.append("apellido", formData.apellido);
+      form.append("email", formData.email);
+      form.append("telefono", formData.telefono);
+      form.append("especialidad", formData.especialidad === "otros" ? formData.especialidadOtra : formData.especialidad);
+      form.append("anio", formData.anio);
+      if (formData.descripcion) form.append("descripcion", formData.descripcion);
+      if (file) form.append("cv", file);
+
+      const res = await fetch("/api/cvs", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status}: ${text}`);
+      }
+
+      return await res.json();
     },
     onSuccess: () => {
       toast({
@@ -46,6 +76,7 @@ export default function SubiTuCV() {
         email: "",
         telefono: "",
         especialidad: "",
+        especialidadOtra: "",
         anio: "",
         descripcion: "",
       });
@@ -87,7 +118,32 @@ export default function SubiTuCV() {
       return;
     }
 
-    mutation.mutate(formData as InsertCV);
+    // If user chose 'Otros', require the custom specialty and use it as the payload value
+    let especialidadFinal = formData.especialidad;
+    if (formData.especialidad === "otros") {
+      const trimmed = formData.especialidadOtra?.trim();
+      if (!trimmed) {
+        toast({
+          title: "Especialidad requerida",
+          description: "Por favor, especificá tu especialidad cuando elegís 'Otros'",
+          variant: "destructive",
+        });
+        return;
+      }
+      especialidadFinal = trimmed;
+    }
+
+    const payload: InsertCV = {
+      nombre: formData.nombre,
+      apellido: formData.apellido,
+      email: formData.email,
+      telefono: formData.telefono,
+      especialidad: especialidadFinal,
+      anio: formData.anio,
+      descripcion: formData.descripcion || undefined,
+    };
+
+    mutation.mutate(payload);
   };
 
   return (
@@ -177,9 +233,23 @@ export default function SubiTuCV() {
                             <SelectItem value="mecanica">Mecánica</SelectItem>
                             <SelectItem value="construcciones">Construcciones</SelectItem>
                             <SelectItem value="quimica">Química</SelectItem>
+                              <SelectItem value="otros">Otros</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
+                      {formData.especialidad === "otros" && (
+                        <div className="space-y-2">
+                          <Label htmlFor="especialidad-otra">Especificá tu especialidad *</Label>
+                          <Input
+                            id="especialidad-otra"
+                            value={formData.especialidadOtra}
+                            onChange={(e) => setFormData({ ...formData, especialidadOtra: e.target.value })}
+                            placeholder="Por ejemplo: Robótica, Telecomunicaciones, etc."
+                            required
+                            data-testid="input-especialidad-otra"
+                          />
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label htmlFor="anio">Año *</Label>
                         <Select

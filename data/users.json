@@ -1,0 +1,30 @@
+[
+  {
+    "email": "Suwho@admin.com",
+    "password": "$2b$10$g4axD6q2W7OWyqC7pCFpcOm8UXPiJkeozitjy8tQ3l7N3beXbFtEW",
+    "name": "Suwho",
+    "role": "admin",
+    "id": "14431aa2-c38f-4231-8854-201bb1fb0f52",
+    "createdAt": "2025-11-06T12:33:07.851Z",
+    "companyVerified": false
+  },
+  {
+    "email": "cfp402.dg@gmail.com",
+    "password": "$2b$10$7CkHrnSFKlz8noiA3w0XGOUyh0/6mDBvCQcxd4e9ktjNuPNJ/L/Dy",
+    "name": "Suwo",
+    "role": "user",
+    "companyName": "",
+    "id": "116a3d60-c635-4654-9f41-19364586fd72",
+    "createdAt": "2025-11-06T12:33:47.744Z",
+    "companyVerified": false
+  },
+  {
+    "email": "Suwho2@admin.com",
+    "password": "$2b$10$vgqFb3eUJNPxK4BjcuFOFOkW7sIiVXQnFKM9p5x7ttVpEGHNQGIMC",
+    "name": "Suwho@admin.com",
+    "role": "user",
+    "id": "c40611f0-4a94-469d-bf75-5cc3c2c13e5e",
+    "createdAt": "2025-11-06T12:41:57.253Z",
+    "companyVerified": false
+  }
+]

@@ -1,4 +1,6 @@
-import { defineConfig } from "drizzle-kit";
+PORT=3000
+NODE_ENV=development
+SESSION_SECRET=tu-clave-secretaimport { defineConfig } from "drizzle-kit";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL, ensure the database is provisioned");
