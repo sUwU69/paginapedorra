@@ -1,0 +1,64 @@
+Quiero una página web con el diseño, estructura y estilo visual similar a https://www.argentina.gob.ar/
+, pero con una temática enfocada en ayudar a estudiantes a conseguir trabajo mientras estudian.
+
+El sitio debe estar destinado a estudiantes de escuelas técnicas, específicamente de la EEST N°1 Otto Krause.
+
+El objetivo principal del sitio es:
+
+Ayudar a los estudiantes a conseguir empleos relacionados con su especialización técnica.
+
+Enviar currículums (CVs) fácilmente desde la plataforma.
+
+Buscar empleos por rubros o áreas específicas (ej: programación, redes, soporte técnico, diseño web, etc.).
+
+Explicar los derechos laborales de los estudiantes, especialmente en relación con prácticas profesionalizantes, pasantías y empleos en blanco.
+
+Ofrecer secciones con consejos para entrevistas, armado de CV, y experiencias de otros estudiantes.
+
+Incorporar un área donde las empresas puedan publicar ofertas de empleo para estudiantes.
+
+Contenido específico que debe tener:
+
+Nombre del sitio: “Trabajo + Estudio | Otto Krause”
+
+Encabezado (Header): con el logo de la escuela, el nombre del proyecto y enlaces a:
+
+Inicio
+
+Ofertas de empleo
+
+Subí tu CV
+
+Rubros / Áreas de trabajo
+
+Derechos laborales
+
+Contacto
+
+Sección principal del home: un buscador central estilo “¿Qué trabajo estás buscando?” con filtros por rubro, tipo de jornada, y ubicación.
+
+Diseño visual similar al de argentina.gob.ar: uso de paleta clara (blancos, azules, grises suaves), tipografía legible y estructura por bloques.
+
+Pie de página (Footer):
+
+Copyright:
+
+© 2025 - Desarrollado por los estudiantes de 6to Informática de la EEST N°1 Otto Krause.
+
+Enlaces útiles a ministerios, normativa laboral juvenil, contacto institucional de la escuela.
+
+Responsivo (mobile-friendly): debe verse bien en celulares, tablets y PCs.
+
+Extras opcionales que pueden estar incluidos:
+
+Testimonios de estudiantes que consiguieron trabajo.
+
+Blog con consejos para el mundo laboral.
+
+Módulo de registro de empresas.
+
+Formulario para subir el CV en PDF.
+
+Accesibilidad (modo alto contraste, tamaño de texto).
+
+El estilo debe ser institucional, moderno, accesible y motivador, dirigido a jóvenes entre 16 y 18 años que buscan iniciarse en el mundo laboral mientras siguen estudiando.
